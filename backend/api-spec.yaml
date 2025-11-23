@@ -152,6 +152,338 @@ paths:
           description: Bad request (invalid input data)
         '500':
           description: Internal server error
+  /positions/{id}/candidates:
+    get:
+      summary: Get candidates for a position
+      description: Retrieves all candidates who have applied to a specific position with their current interview stage and average score (for Kanban view)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Position ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '200':
+          description: List of candidates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positionId:
+                    type: integer
+                    description: ID of the position
+                    example: 1
+                  positionTitle:
+                    type: string
+                    description: Title of the position
+                    example: "Desarrollador Full Stack Senior"
+                  candidates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        candidateId:
+                          type: integer
+                          description: Candidate ID
+                          example: 1
+                        fullName:
+                          type: string
+                          description: Full name of the candidate
+                          example: "Juan Pérez Rodríguez"
+                        email:
+                          type: string
+                          description: Email of the candidate
+                          example: "juan.perez@email.com"
+                        applicationId:
+                          type: integer
+                          description: Application ID
+                          example: 1
+                        applicationDate:
+                          type: string
+                          format: date-time
+                          description: Date when the candidate applied
+                          example: "2025-11-14T23:33:40.373Z"
+                        currentInterviewStep:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              description: Interview step ID
+                              example: 1
+                            name:
+                              type: string
+                              description: Name of the interview stage
+                              example: "Filtro inicial HR"
+                            orderIndex:
+                              type: integer
+                              description: Order of this stage in the interview flow (for Kanban column ordering)
+                              example: 1
+                        averageScore:
+                          type: number
+                          nullable: true
+                          description: Average score from all interviews (null if no interviews with scores)
+                          example: 85
+                        interviewCount:
+                          type: integer
+                          description: Total number of interviews conducted
+                          example: 3
+                  totalCandidates:
+                    type: integer
+                    description: Total number of candidates for this position
+                    example: 1
+              example:
+                positionId: 1
+                positionTitle: "Desarrollador Full Stack Senior"
+                candidates:
+                  - candidateId: 1
+                    fullName: "Juan Pérez Rodríguez"
+                    email: "juan.perez@email.com"
+                    applicationId: 1
+                    applicationDate: "2025-11-14T23:33:40.373Z"
+                    currentInterviewStep:
+                      id: 1
+                      name: "Filtro inicial HR"
+                      orderIndex: 1
+                    averageScore: 85
+                    interviewCount: 3
+                totalCandidates: 1
+        '400':
+          description: Invalid ID format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid ID format"
+                  message:
+                    type: string
+                    example: "Position ID must be a positive integer"
+                  statusCode:
+                    type: integer
+                    example: 400
+        '404':
+          description: Position not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Position not found"
+                  message:
+                    type: string
+                    example: "No position found with id 999"
+                  statusCode:
+                    type: integer
+                    example: 404
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while fetching candidates"
+                  statusCode:
+                    type: integer
+                    example: 500
+  /candidates/{id}/stage:
+    put:
+      summary: Update candidate interview stage
+      description: Updates the current interview stage of a candidate for a specific position (used for Kanban drag-and-drop)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Candidate ID
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - positionId
+                - interviewStepId
+              properties:
+                positionId:
+                  type: integer
+                  description: Position ID (to identify which application to update)
+                  minimum: 1
+                  example: 1
+                interviewStepId:
+                  type: integer
+                  description: New interview step ID (must belong to the position's interview flow)
+                  minimum: 1
+                  example: 2
+            example:
+              positionId: 1
+              interviewStepId: 2
+      responses:
+        '200':
+          description: Candidate stage updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Candidate stage updated successfully"
+                  data:
+                    type: object
+                    properties:
+                      candidateId:
+                        type: integer
+                        example: 1
+                      fullName:
+                        type: string
+                        example: "Juan Pérez Rodríguez"
+                      positionId:
+                        type: integer
+                        example: 1
+                      positionTitle:
+                        type: string
+                        example: "Desarrollador Full Stack Senior"
+                      applicationId:
+                        type: integer
+                        example: 1
+                      previousStage:
+                        type: object
+                        nullable: true
+                        description: Previous interview stage (null if this is the first stage assignment)
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: "Filtro inicial HR"
+                      currentStage:
+                        type: object
+                        description: New interview stage
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: "Evaluación técnica"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        description: Timestamp when the update occurred
+                        example: "2025-11-23T05:48:36.597Z"
+              example:
+                success: true
+                message: "Candidate stage updated successfully"
+                data:
+                  candidateId: 1
+                  fullName: "Juan Pérez Rodríguez"
+                  positionId: 1
+                  positionTitle: "Desarrollador Full Stack Senior"
+                  applicationId: 1
+                  previousStage:
+                    id: 1
+                    name: "Filtro inicial HR"
+                  currentStage:
+                    id: 2
+                    name: "Evaluación técnica"
+                  updatedAt: "2025-11-23T05:48:36.597Z"
+        '400':
+          description: Bad request (invalid input data or interview step does not belong to position's flow)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Validation error"
+                  message:
+                    type: string
+                    example: "Missing required field: positionId"
+                  statusCode:
+                    type: integer
+                    example: 400
+              examples:
+                missingField:
+                  value:
+                    error: "Validation error"
+                    message: "Missing required field: interviewStepId"
+                    statusCode: 400
+                invalidType:
+                  value:
+                    error: "Validation error"
+                    message: "positionId must be a positive integer"
+                    statusCode: 400
+                invalidStep:
+                  value:
+                    error: "Invalid interview step"
+                    message: "Interview step 8 does not belong to the interview flow of position 5"
+                    statusCode: 400
+        '404':
+          description: Candidate or application not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Candidate not found"
+                  message:
+                    type: string
+                    example: "Candidate with id 999 not found"
+                  statusCode:
+                    type: integer
+                    example: 404
+              examples:
+                candidateNotFound:
+                  value:
+                    error: "Candidate not found"
+                    message: "Candidate with id 999 not found"
+                    statusCode: 404
+                applicationNotFound:
+                  value:
+                    error: "Application not found"
+                    message: "Application not found for candidate 1 in position 999"
+                    statusCode: 404
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "An unexpected error occurred while updating candidate stage"
+                  statusCode:
+                    type: integer
+                    example: 500
   /upload:
     post:
       summary: Upload a file

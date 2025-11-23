@@ -3,6 +3,10 @@ import { validateCandidateData } from '../validator';
 import { Education } from '../../domain/models/Education';
 import { WorkExperience } from '../../domain/models/WorkExperience';
 import { Resume } from '../../domain/models/Resume';
+import { PrismaClient } from '@prisma/client';
+
+// Instancia compartida de Prisma Client para mejor performance
+const prisma = new PrismaClient();
 
 export const addCandidate = async (candidateData: any) => {
     try {
@@ -62,4 +66,143 @@ export const findCandidateById = async (id: number): Promise<Candidate | null> =
         console.error('Error al buscar el candidato:', error);
         throw new Error('Error al recuperar el candidato');
     }
+};
+
+/**
+ * Interface para el request body de actualización de etapa
+ */
+export interface UpdateCandidateStageRequest {
+    positionId: number;
+    interviewStepId: number;
+}
+
+/**
+ * Interface para la respuesta de actualización de etapa
+ */
+export interface UpdateCandidateStageResponse {
+    success: boolean;
+    message: string;
+    data: {
+        candidateId: number;
+        fullName: string;
+        positionId: number;
+        positionTitle: string;
+        applicationId: number;
+        previousStage: {
+            id: number;
+            name: string;
+        } | null;
+        currentStage: {
+            id: number;
+            name: string;
+        };
+        updatedAt: string;
+    };
+}
+
+/**
+ * Actualiza la etapa actual del proceso de entrevistas de un candidato
+ * 
+ * @param candidateId - ID del candidato
+ * @param positionId - ID de la posición a la que aplicó
+ * @param interviewStepId - ID de la nueva etapa
+ * @returns Información detallada de la actualización
+ * @throws Error si no existe el candidato, aplicación o la validación falla
+ */
+export const updateCandidateStage = async (
+    candidateId: number,
+    positionId: number,
+    interviewStepId: number
+): Promise<UpdateCandidateStageResponse> => {
+    // 1. Verificar que el candidato existe
+        const candidate = await prisma.candidate.findUnique({
+            where: { id: candidateId },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true
+            }
+        });
+
+        if (!candidate) {
+            throw new Error(`Candidate with id ${candidateId} not found`);
+        }
+
+        // 2. Buscar la aplicación del candidato a la posición
+        const application = await prisma.application.findFirst({
+            where: {
+                candidateId: candidateId,
+                positionId: positionId
+            },
+            include: {
+                position: {
+                    select: {
+                        id: true,
+                        title: true,
+                        interviewFlowId: true
+                    }
+                },
+                interviewStep: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
+            }
+        });
+
+        if (!application) {
+            throw new Error(`Application not found for candidate ${candidateId} in position ${positionId}`);
+        }
+
+        // 3. Verificar que el nuevo InterviewStep existe y pertenece al flujo correcto
+        const newInterviewStep = await prisma.interviewStep.findFirst({
+            where: {
+                id: interviewStepId,
+                interviewFlowId: application.position.interviewFlowId
+            },
+            select: {
+                id: true,
+                name: true,
+                interviewFlowId: true
+            }
+        });
+
+        if (!newInterviewStep) {
+            throw new Error(`Interview step ${interviewStepId} not found or does not belong to position ${positionId} interview flow`);
+        }
+
+        // 4. Guardar información de la etapa anterior (puede ser null)
+        const previousStage = application.interviewStep ? {
+            id: application.interviewStep.id,
+            name: application.interviewStep.name
+        } : null;
+
+        // 5. Actualizar la aplicación con la nueva etapa
+        await prisma.application.update({
+            where: { id: application.id },
+            data: {
+                currentInterviewStep: interviewStepId,
+                updatedAt: new Date()
+            }
+        });
+
+        // 6. Construir y retornar la respuesta
+        return {
+            success: true,
+            message: 'Candidate stage updated successfully',
+            data: {
+                candidateId: candidate.id,
+                fullName: `${candidate.firstName} ${candidate.lastName}`,
+                positionId: application.position.id,
+                positionTitle: application.position.title,
+                applicationId: application.id,
+                previousStage: previousStage,
+                currentStage: {
+                    id: newInterviewStep.id,
+                    name: newInterviewStep.name
+                },
+                updatedAt: new Date().toISOString()
+            }
+        };
 };
