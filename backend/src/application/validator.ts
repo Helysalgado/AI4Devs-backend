@@ -105,3 +105,42 @@ export const validateCandidateData = (data: any) => {
         validateCV(data.cv);
     }
 };
+
+/**
+ * Custom error para validaciones
+ */
+export class ValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+}
+
+/**
+ * Valida que un ID sea un número entero positivo
+ * @param id - El ID a validar (puede ser string o number)
+ * @param resourceName - Nombre del recurso (ej: "candidate", "position")
+ * @returns El ID parseado como número
+ * @throws ValidationError con mensaje descriptivo si la validación falla
+ */
+export const validatePositiveIntegerId = (
+    id: string | number, 
+    resourceName: string = 'resource'
+): number => {
+    const parsedId = typeof id === 'string' ? parseInt(id) : id;
+    
+    if (isNaN(parsedId)) {
+        throw new ValidationError(
+            `Invalid ${resourceName} ID format. Must be a positive integer.`
+        );
+    }
+    
+    if (parsedId <= 0) {
+        const capitalizedName = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
+        throw new ValidationError(
+            `${capitalizedName} ID must be a positive integer.`
+        );
+    }
+    
+    return parsedId;
+};
