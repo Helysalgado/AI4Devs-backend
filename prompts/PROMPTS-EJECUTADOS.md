@@ -3,9 +3,9 @@
 **Proyecto**: Sistema ATS - Endpoints para Vista Kanban  
 **Fecha**: 23 de noviembre de 2025  
 **Guía Base**: `prompts/03-GUIA-PROMPTS-PROYECTO.md`  
-**Documento Relacionado**: `docs/IMPLEMENTACION-KANBAN-ENDPOINTS.md`
-**IDE:** Cursor
-**Modelo:** Sonnet 4.5
+**Documento Relacionado**: `docs/IMPLEMENTACION-KANBAN-ENDPOINTS.md`   
+**IDE:** Cursor   
+**Modelo:** Sonnet 4.5   
 
 ---
 
